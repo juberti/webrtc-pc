@@ -333,7 +333,7 @@
           <li>
             <p>Validate the <code><a>RTCConfiguration</a></code> argument by
             running the steps defined by the <a href=
-            "#dom-peerconnection-updateice">updateIce()</a> method.</p>
+            "#dom-peerconnection-setconfiguration">setConfiguration()</a> method.</p>
           </li>
 
           <li>
@@ -1072,6 +1072,39 @@
             yet been set.</p>
           </dd>
 
+          <dt>void addIceCandidate (RTCIceCandidate candidate, VoidFunction
+          successCallback, RTCPeerConnectionErrorCallback failureCallback)</dt>
+
+          <dd>
+            <p>The <dfn id=
+            "dom-peerconnection-addicecandidate"><code>addIceCandidate()</code></dfn>
+            method provides a remote candidate to the ICE Agent. In addition to
+            being added to the remote description, connectivity checks will be
+            sent to the new candidates as long as the <a href=
+            "#ice-transports-setting">ICE Transports setting</a> is not set to
+            <code>none</code>. This call will result in a change to the
+            connection state of the ICE Agent, and may result in a change to
+            media state if it results in different connectivity being
+            established.</p>
+
+            <p>If the candidate parameter is malformed, throw a
+            <code>SyntaxError</code> exception and abort these steps.</p>
+
+            <p>If the candidate is successfully applied, the user agent MUST
+            queue a task to invoke <var>successCallback</var>.</p>
+
+            <p>If the candidate could not be successfully applied, the user
+            agent MUST queue a task to invoke <var>failureCallback</var> with a
+            <code>DOMError</code> object whose <code>name</code> attribute has
+            the value TBD (TODO InvalidCandidate and InvalidMidIndex).</p>
+
+            <div class="note">
+              What errors do we need here? Should we reuse the
+              *SessionDescriptionError names or invent new ones for candidates?
+              Should this method be queued?
+            </div>
+          </dd>
+
           <dt>readonly attribute RTCSignalingState signalingState</dt>
 
           <dd>
@@ -1084,10 +1117,30 @@
             signaling state</a>.</p>
           </dd>
 
-          <dt>void updateIce (RTCConfiguration configuration)</dt>
+          <dt>readonly attribute RTCIceGatheringState iceGatheringState</dt>
 
           <dd>
-            <p>The updateIce method updates the ICE Agent process of gathering
+            <p>The <dfn id=
+            "dom-peerconnection-ice-gathering-state"><code>iceGatheringState</code></dfn>
+            attribute MUST return the gathering state of the <a href=
+            "#rtcpeerconnection-ice-agent"><code>RTCPeerConnection</code> ICE
+            Agent</a>.</p>
+          </dd>
+
+          <dt>readonly attribute RTCIceConnectionState iceConnectionState</dt>
+
+          <dd>
+            <p>The <dfn id=
+            "dom-peerconnection-ice-connection-state"><code>iceConnectionState</code></dfn>
+            attribute MUST return the state of the <a href=
+            "#rtcpeerconnection-ice-agent"><code>RTCPeerConnection</code> ICE
+            Agent</a> ICE state.</p>
+          </dd>
+
+          <dt>void setConfiguration (RTCConfiguration configuration)</dt>
+
+          <dd>
+            <p>The setConfiguration method updates the ICE Agent process of gathering
             local candidates and pinging remote candidates.</p>
 
             <p>This call may result in a change to the state of the ICE Agent,
@@ -1095,7 +1148,7 @@
             connectivity being established.</p>
 
             <p>When the <dfn id=
-            "dom-peerconnection-updateice"><code>updateIce()</code></dfn>
+            "dom-peerconnection-setconfiguration"><code>setConfiguration()</code></dfn>
             method is invoked, the user MUST run the following steps to process
             the <code><a>RTCConfiguration</a></code> dictionary:</p>
 
@@ -1185,59 +1238,6 @@
               The exception types throw in the above algorithm are provisional
               (until we decide what to do in each case).
             </div>
-          </dd>
-
-          <dt>void addIceCandidate (RTCIceCandidate candidate, VoidFunction
-          successCallback, RTCPeerConnectionErrorCallback failureCallback)</dt>
-
-          <dd>
-            <p>The <dfn id=
-            "dom-peerconnection-addicecandidate"><code>addIceCandidate()</code></dfn>
-            method provides a remote candidate to the ICE Agent. In addition to
-            being added to the remote description, connectivity checks will be
-            sent to the new candidates as long as the <a href=
-            "#ice-transports-setting">ICE Transports setting</a> is not set to
-            <code>none</code>. This call will result in a change to the
-            connection state of the ICE Agent, and may result in a change to
-            media state if it results in different connectivity being
-            established.</p>
-
-            <p>If the candidate parameter is malformed, throw a
-            <code>SyntaxError</code> exception and abort these steps.</p>
-
-            <p>If the candidate is successfully applied, the user agent MUST
-            queue a task to invoke <var>successCallback</var>.</p>
-
-            <p>If the candidate could not be successfully applied, the user
-            agent MUST queue a task to invoke <var>failureCallback</var> with a
-            <code>DOMError</code> object whose <code>name</code> attribute has
-            the value TBD (TODO InvalidCandidate and InvalidMidIndex).</p>
-
-            <div class="note">
-              What errors do we need here? Should we reuse the
-              *SessionDescriptionError names or invent new ones for candidates?
-              Should this method be queued?
-            </div>
-          </dd>
-
-          <dt>readonly attribute RTCIceGatheringState iceGatheringState</dt>
-
-          <dd>
-            <p>The <dfn id=
-            "dom-peerconnection-ice-gathering-state"><code>iceGatheringState</code></dfn>
-            attribute MUST return the gathering state of the <a href=
-            "#rtcpeerconnection-ice-agent"><code>RTCPeerConnection</code> ICE
-            Agent</a>.</p>
-          </dd>
-
-          <dt>readonly attribute RTCIceConnectionState iceConnectionState</dt>
-
-          <dd>
-            <p>The <dfn id=
-            "dom-peerconnection-ice-connection-state"><code>iceConnectionState</code></dfn>
-            attribute MUST return the state of the <a href=
-            "#rtcpeerconnection-ice-agent"><code>RTCPeerConnection</code> ICE
-            Agent</a> ICE state.</p>
           </dd>
 
           <dt>RTCConfiguration getConfiguration()</dt>
