@@ -1,20 +1,19 @@
-<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html>
 <!--
     To publish this document, see instructions in README
   -->
-<!DOCTYPE html>
 
 <html lang="en">
 <head>
   <title>WebRTC 1.0: Real-time Communication Between Browsers</title>
-  <meta content="text/html; charset=us-ascii" http-equiv="Content-Type">
+  <meta charset="utf-8">
   <script class="remove" src="http://www.w3.org/Tools/respec/respec-w3c-common"
   type="text/javascript">
-// // keep this comment // 
+// // keep this comment //
   </script>
   <script class="remove" src="webrtc.js" type="text/javascript">
 // // keep
-    this comment // 
+    this comment //
   </script>
 </head>
 
@@ -118,7 +117,7 @@
     <dfn>Constraints</dfn>, and <dfn>Consumer</dfn> are defined in
     [[!GETUSERMEDIA]].</p>
   </section>
- 
+
   <section>
     <h2>Peer-to-peer connections</h2>
 
@@ -129,7 +128,7 @@
       communicate directly, browser to browser. Communications are coordinated
       via a signaling channel which is provided by unspecified means, but
       generally by a script in the page via the server, e.g. using
-      <code>XMLHttpRequest</code>.</p>
+      <code>XMLHttpRequest</code> [[XMLHttpRequest]].</p>
     </section>
 
     <section>
@@ -146,10 +145,16 @@
             such as STUN and TURN server.</p>
           </dd>
 
-          <dt>RTCIceTransports iceTransports = "all"</dt>
+          <dt>RTCIceTransportPolicy iceTransportPolicy = "all"</dt>
 
           <dd>
             <p>Indicates which candidates the ICE engine is allowed to use.</p>
+          </dd>
+
+          <dt>RTCBundlePolicy bundlePolicy = "balanced"</dt>
+
+          <dd>
+            <p>Indicates which <a href="#target-bundle-policy">BundlePolicy</a> to use. </p>
           </dd>
 
           <dt>DOMString peerIdentity</dt>
@@ -204,9 +209,9 @@
       </section>
 
       <section>
-        <h4>RTCIceTransports Enum</h4>
+        <h4>RTCIceTransportPolicy Enum</h4>
 
-        <dl class="idl" title="enum RTCIceTransports">
+        <dl class="idl" title="enum RTCIceTransportPolicy">
           <dt>none</dt>
 
           <dd>The ICE engine MUST not send or receive any packets at this
@@ -222,6 +227,40 @@
 
           <dd>The ICE engine may use any type of candidates when this value is
           specified.</dd>
+        </dl>
+      </section>
+
+      <section>
+        <h4>RTCBundlePolicy Enum</h4>
+
+        Defined in [[!RTCWEB-JSEP]].  The following is a non-normative
+        summary for convenience.
+
+        The BundlePolicy effects which media tracks are negotiated if
+        the remote endpoint is not BUNDLE-aware, and what ICE
+        candidates are gathered.  If the remote endpoint is
+        BUNDLE-aware, all media tracks and data channels are BUNDLEd
+        onto the same transport.
+
+        <dl class="idl" title="enum RTCBundlePolicy" id="target-bundle-policy">
+          <dt>balanced</dt>
+
+          <dd>Gather ICE candidates for each media type in use (audio,
+          video, and data).  If the remote endpoint is not
+          BUNDLE-aware, negotiate only one audio and video track on
+          separate transports.</dd>
+
+          <dt>max-compat</dt>
+
+          <dd>Gather ICE candidates for each track. If the remote
+          endpoint is not BUNDLE-aware, negotiate all media tracks on
+          separate transports.</dd>
+
+          <dt>max-bundle</dt>
+
+          <dd>Gather ICE candidates for only one track.  If the remote
+          endpoint is not BUNDLE-aware, negotiate only one media
+          track.</dd>
         </dl>
       </section>
 
@@ -435,19 +474,28 @@
 
           <li>
             <p>If the ICE Agent has found one or more candidate pairs for each
-            MediaStreamTrack that forms a valid connection, the ICE connection
+            <code>MediaStreamTrack</code> that forms a valid connection, the ICE connection
             state is changed to "connected".</p>
           </li>
 
           <li>
             <p>When the ICE Agent finishes checking all candidate pairs, if at
-            least one connection has been found for each MediaStreamTrack, the
+            least one connection has been found for each <code>MediaStreamTrack</code>, the
             <a href=
             "#dom-peerconnection-ice-connection-state"><code>RTCPeerConnection</code>
             ice connection state</a> is changed to "completed"; otherwise
             "failed".</p>
           </li>
         </ol>
+
+        <div class="note">
+          <p>The section above shouldn't need to reference MediaStreamTracks when
+          discussing the ICE connection state; one problem with this is that
+          it doesn't handle the data channel situation properly.
+          Rewrite this to refer to m-lines or ICE "media streams" or some such
+          (here and in the later ICE connection state discussions.)
+          </p>
+        </div>
 
         <p>When the ICE Agent needs to notify the script about the candidate
         gathering progress, the user agent must queue a task to run the
@@ -497,145 +545,8 @@
           </li>
         </ol>
 
-        <p>User agents negotiate the codec resolution, bitrate, and other media
-        parameters. It is RECOMMENDED that user agents initially negotiate for
-        the maximum resolution of a video stream. For streams that are then
-        rendered (using a <code>video</code> element), it is RECOMMENDED that
-        user agents renegotiate for a resolution that matches the rendered
-        display size.</p>
-
-        <p>The word "components" in this context refers to an RTP media flow
-        and does not have anything to do with how [[ICE]] uses the term
-        "component".</p>
-
-        <p>When a user agent has reached the point where a
-        <code><a>MediaStreamTrack</a></code> can be created to represent an incoming
-        component, the user agent MUST run the following steps:</p>
-
-        <ol>
-          <li>
-            <p>Let <var>connection</var> be the
-            <code><a>RTCPeerConnection</a></code> expecting this media.</p>
-          </li>
-
-          <li>
-            <p>Run the <a href="#represent-component-with-track">algorithm</a>
-            to represent the incoming component with a new 
-            <code>MediaStreamTrack</code> <var>track</var>.</p>
-
-            <p class="note">The creation of new incoming
-            <code>MediaStreamTrack</code>s may be triggered either by SDP
-            negotiation or by the receipt of media on a given flow. 
-            <!--  [[OPEN ISSUE: How many <code>MediaStream</code>s are created
-                when you receive multiple conflicting pranswers?]] --></p>
-          </li>
-
-          <li> 
-            Add <var>track</var> to the <code>MediaStream</code>s <var>streams</var>
-            referenced by the SDP negotiation, creating new ones if they do not
-            yet exist. If no <code>MediaStream</code>s are specified,
-            a default <code>MediaStream</code> is created and used.</p>
-          </li>
-
-          <li>
-            <p>Queue a task to run the following substeps:</p>
-
-            <ol>
-              <li>
-                <p>If the <var>connection</var>'s <a href=
-                "#dom-peerconnection-signaling-state"><code>RTCPeerConnection</code>
-                signalingState</a> is <code>closed</code>, abort these
-                steps.</p>
-              </li>
-
-              <li>
-                <p>Create a new RTCRtpReceiver object <var>receiver</var>
-                  for <var>track</track>, and add it
-                  to <var>connection</var>'s <a href=
-                "#receivers-set">set of receivers</a>.</p>
-              </li>
-
-              <li>
-                <p><a href="#fire-a-track-event">Fire an event</a> named
-                <code title="event-track"><a href=
-                "#event-track">track</a></code> with
-                <var>receiver</var>, <var>track</var>, and <var>streams</var>
-                at the <var title="">connection</var> object.</p>
-              </li>
-            </ol>
-          </li>
-        </ol>
-
-        <p>When a user agent has negotiated media for a component that belongs
-        to a media track that is already represented by an existing
-        <code><a>MediaStreamTrack</a></code> object, the user agent MUST associate
-        the component with that <code><a>MediaStreamTrack</a></code> object.</p>
-
-        <p>When an <code><a>RTCPeerConnection</a></code> finds that a track
-        from the remote peer has been removed, the user agent MUST follow these
-        steps:</p>
-
-        <ol>
-          <li>
-            <p>Let <var>connection</var> be the
-            <code><a>RTCPeerConnection</a></code> associated with the track
-            being removed.</p>
-          </li>
-
-          <li>
-            <p>Let <var>track</var> be the <code><a>MediaStreamTrack</a></code>
-            object that represents the track being removed, if any. If
-            there isn't one, then abort these steps.</p>
-          </li>
-
-          <li>
-            <p>By definition, <var>track</var> is now ended.</p>
-
-            <p class="note">A <span title="concept-task">task</span> is thus
-            <span title="queue a task">queued</span> to update
-            <var>track</var> and fire an event.</p>
-          </li>
-
-          <li>
-            <p>Queue a task to run the following substeps:</p>
-
-            <ol>
-              <li>
-                <p>If the <var>connection</var>'s <a href=
-                "#dom-peerconnection-signaling-state"><code>RTCPeerConnection</code>
-                signalingState</a> is <code>closed</code>, abort these
-                steps.</p>
-              </li><!-- close() was probably called just before this
-         task ran -->
-
-              <li>
-                <p>Remove the RTCRtpReceiver associated with <var>track</var> from 
-                <var>connection</var>'s <a href="#receivers-set">set of receivers</a>.</p>
-              </li>
-
-              <li>
-                <p>End the <var>track</var> object.</p>
-              </li>
-            </ol>
-          </li>
-        </ol>
-
         <p>The task source for the <span title="concept-task">tasks</span>
         listed in this section is the networking task source.</p>
-
-        <p>If something in the browser changes that causes the
-        <code><a>RTCPeerConnection</a></code> object to need to initiate a new
-        session description negotiation, a <code><a href=
-        "#event-negotiation">negotiationneeded</a></code> event is fired at the
-        <code><a>RTCPeerConnection</a></code> object.</p>
-
-        <p>In particular, if an <code><a>RTCPeerConnection</a></code> object is
-        <a title="consumer">consuming</a> a <code><a>MediaStream</a></code> on
-        which a track is added, by, e.g., the <code><a href=
-        "getusermedia.html#dom-mediastream-addtrack">addTrack()</a></code>
-        method being invoked, the <code><a>RTCPeerConnection</a></code> object
-        MUST fire the "negotiationneeded" event. Removal of media components
-        must also trigger "negotiationneeded".</p>
 
         <p class="warning">To prevent network sniffing from allowing a fourth
         party to establish a connection to a peer using the information sent
@@ -675,9 +586,8 @@
             </dd>
            -->
 
-          <dt>void createOffer (RTCSessionDescriptionCallback successCallback,
-          RTCPeerConnectionErrorCallback failureCallback, optional
-          RTCOfferOptions options)</dt>
+          <dt>Promise&lt;RTCSessionDescription&gt; createOffer (
+            optional RTCOfferOptions options)</dt>
 
           <dd>
             <p>The createOffer method generates a blob of SDP that contains an
@@ -705,14 +615,14 @@
 
             <p>Session descriptions generated by createOffer MUST be
             immediately usable by setLocalDescription without causing an error
-            as long as setLocalDescription is called within the successCallback
-            function. If a system has limited resources (e.g. a finite number
+            as long as setLocalDescription is called reasonably soon.
+            If a system has limited resources (e.g. a finite number
             of decoders), createOffer needs to return an offer that reflects
             the current state of the system, so that setLocalDescription will
             succeed when it attempts to acquire those resources. The session
             descriptions MUST remain usable by setLocalDescription without
-            causing an error until at least end of the successCallback
-            function. Calling this method is needed to get the ICE user name
+            causing an error until at least the end of the fulfillment callback of the
+            returned promise. Calling this method is needed to get the ICE user name
             fragment and password.</p>
 
             <p>If the <code>RTCPeerConnection</code> is configured to generate
@@ -721,15 +631,15 @@
 
             <p>If this <code>RTCPeerConnection</code> object is closed before
             the SDP generation process completes, the USER agent MUST suppress
-            the result and not call any of the result callbacks.</p>
+            the result and not resolve or reject the returned promise.</p>
 
             <p>If the SDP generation process completed successfully, the user
-            agent MUST queue a task to invoke <var>successCallback</var> with a
+            agent MUST resolve the returned promise with a
             newly created <code><a>RTCSessionDescription</a></code> object,
-            representing the generated offer, as its argument.</p>
+            representing the generated offer.</p>
 
             <p>If the SDP generation process failed for any reason, the user
-            agent MUST queue a task to invoke <var>failureCallback</var> with
+            agent MUST reject the returned promise with
             an <code>DOMError</code> object of type TBD as its argument.</p>
 
             <p>To Do: Discuss privacy aspects of this from a fingerprinting
@@ -737,8 +647,7 @@
             :-)</p>
           </dd>
 
-          <dt>void createAnswer (RTCSessionDescriptionCallback successCallback,
-          RTCPeerConnectionErrorCallback failureCallback)</dt>
+          <dt>Promise&lt;RTCSessionDescription&gt; createAnswer ()</dt>
 
           <dd>
             <p>The createAnswer method generates an [[!SDP]] answer with the
@@ -757,12 +666,12 @@
             answer.</p>
 
             <p>Session descriptions generated by createAnswer must be
-            immediately usable by setLocalDescription without generating an
-            error if setLocalDescription is called from the successCallback
-            function. Like createOffer, the returned description should reflect
+            immediately usable by setLocalDescription without causing an
+            error as long as setLocalDescription is called reasonably soon.
+            Like createOffer, the returned description should reflect
             the current state of the system. The session descriptions MUST
             remain usable by setLocalDescription without causing an error until
-            at least the end of the successCallback function. Calling this
+            at least the end of the fulfillment callback of the returned promise. Calling this
             method is needed to get the ICE user name fragment and
             password.</p>
 
@@ -777,21 +686,20 @@
 
             <p>If this <code>RTCPeerConnection</code> object is closed before
             the SDP generation process completes, the USER agent MUST suppress
-            the result and not call any of the result callbacks.</p>
+            the result and not resolve or reject the returned promise.</p>
 
             <p>If the SDP generation process completed successfully, the user
-            agent MUST queue a task to invoke <var>successCallback</var> with a
+            agent MUST resolve the returned promise with a
             newly created <code><a>RTCSessionDescription</a></code> object,
-            representing the generated answer, as its argument.</p>
+            representing the generated answer.</p>
 
             <p>If the SDP generation process failed for any reason, the user
-            agent MUST queue a task to invoke <var>failureCallback</var> with
-            an <code>DOMError</code> object of type TBD as its argument.</p>
+            agent MUST reject the returned promise with a <code>DOMError</code>
+            object of type TBD.</p>
           </dd>
 
-          <dt>void setLocalDescription (RTCSessionDescription description,
-          VoidFunction successCallback, RTCPeerConnectionErrorCallback
-          failureCallback)</dt>
+          <dt>Promise&lt;void&gt; setLocalDescription (
+            RTCSessionDescription description)</dt>
 
           <dd>
             <p>The <dfn id=
@@ -816,27 +724,47 @@
             <p>To Do: specify what parts of the SDP can be changed between the
             createOffer and setLocalDescription</p>
 
-            <p>When the method is invoked, the user agent must follow the
-            <dfn id="set-description-model">processing model</dfn> described by
-            the following list:</p>
+            <p>The following list describes the <dfn id=
+            "set-description-model">processing model</dfn> for setting a new
+            <code><a>RTCSessionDescription</a></code>.</p>
 
             <ul>
               <li>
-                <p>If this <code><a>RTCPeerConnection</a></code> object's
-                <a href="#dom-peerconnection-signaling-state">signaling
-                state</a> is <code>closed</code>, the user agent MUST throw an
-                <code>InvalidStateError</code> exception and abort this
-                operation.</p>
-              </li>
+                <p>When the method is invoked, the user agent MUST run the
+                following steps:</p>
 
-              <li>
-                <p>If a local description contains a different set of ICE
-                credentials, then the ICE Agent MUST trigger an ICE restart.
-                When ICE restarts, the gathering state will be changed back to
-                "gathering", if it was not already gathering. If the <a href=
-                "#dom-peerconnection-ice-connection-state"><code>RTCPeerConnection</code>
-                ice connection state</a> was "completed", it will be changed
-                back to "connected".</p>
+                <ol>
+                  <li>
+                    <p>Let <var>p</var> be a new promise.</p>
+                  </li>
+
+                  <li>
+                    <p>If this <code><a>RTCPeerConnection</a></code> object's
+                    <a href="#dom-peerconnection-signaling-state">signaling
+                    state</a> is <code>closed</code>, the user agent MUST reject
+                    <var>p</var> with <code>InvalidStateError</code>, and
+                    jump to the step labeled <em>Return</em>.</p>
+                  </li>
+
+                  <li>
+                    <p>If a local description contains a different set of ICE
+                    credentials, then the ICE Agent MUST trigger an ICE restart.
+                    When ICE restarts, the gathering state will be changed back to
+                    "gathering", if it was not already gathering. If the <a href=
+                    "#dom-peerconnection-ice-connection-state"><code>RTCPeerConnection</code>
+                    ice connection state</a> was "completed", it will be changed
+                    back to "connected".</p>
+                  </li>
+
+                  <li>
+                    <p>The user agent must start the process to apply the
+                    <code><a>RTCSessionDescription</a></code> argument.</p>
+                  </li>
+
+                  <li>
+                    <p><em>Return:</em> Return <var>p</var>.</p>
+                  </li>
+                </ol>
               </li>
 
               <li>
@@ -871,7 +799,7 @@
                         "#dom-peerconnection-signaling-state">signaling
                         state</a> of <var>connection</var>.</p>
 
-                        <p>Let <var>errorType</var> be
+                        <p>Let <var>reason</var> be
                         <code>InvalidSessionDescriptionError</code>.</p>
                       </li>
 
@@ -889,9 +817,9 @@
                         partially applied when the failure occurred.</p>
 
                         <p>If rollback was not necessary or was completed
-                        successfully, let <var>errorType</var> be
+                        successfully, let <var>reason</var> be
                         <code>IncompatibleSessionDescriptionError</code>. If
-                        rollback was not possible, let <var>errorType</var> be
+                        rollback was not possible, let <var>reason</var> be
                         <code>InternalError</code> and set
                         <var>connection</var>'s <a href=
                         "#dom-peerconnection-signaling-state">signaling
@@ -901,9 +829,7 @@
                   </li>
 
                   <li>
-                    <p>Invoke the <var>failureCallback</var> with an
-                    <code>DOMError</code> object, whose <code>name</code>
-                    attribute is <var>errorType</var>, as its argument.</p>
+                    <p>Reject <var>p</var> with <var>reason</var>.</p>
                   </li>
                 </ol>
               </li>
@@ -917,7 +843,7 @@
                   <li>
                     <p>Let <var>connection</var> be the
                     <code><a>RTCPeerConnection</a></code> object on with this
-                    metod was invoked.</p>
+                    method was invoked.</p>
                   </li>
 
                   <li>
@@ -966,11 +892,7 @@
                   </li>
 
                   <li>
-                    <p>Queue a new task that, if <var>connection</var>'s
-                    <a href=
-                    "#dom-peerconnection-signaling-state">signalingState</a> is
-                    not <code>closed</code>, invokes the
-                    <var>successCallback</var>.</p>
+                    <p>Resolve <var>p</var> with <var>undefined</var>.</p>
                   </li>
                 </ol>
               </li>
@@ -982,8 +904,8 @@
           <dd>
             <p>The <dfn id=
             "dom-peerconnection-localdescription"><code>localDescription</code></dfn>
-            attribute MUST return the <code><a>RTCSessionDescription</a></code>
-            that was most recently passed to <code><a href=
+            attribute MUST return the last <code><a>RTCSessionDescription</a></code>
+            that was successfully set using <code><a href=
             "#dom-peerconnection-setlocaldescription">setLocalDescription()</a></code>,
             plus any local candidates that have been generated by the ICE
             Agent since then.</p>
@@ -992,9 +914,8 @@
             yet been set.</p>
           </dd>
 
-          <dt>void setRemoteDescription (RTCSessionDescription description,
-          VoidFunction successCallback, RTCPeerConnectionErrorCallback
-          failureCallback)</dt>
+          <dt>Promise&lt;void&gt; setRemoteDescription (
+            RTCSessionDescription description)</dt>
 
           <dd>
             <p>The <dfn id=
@@ -1021,8 +942,8 @@
 
                 <p>The <a href="#target-peer-identity">target peer identity</a>
                 cannot be changed once set. Once set, if a different value is
-                provided, the user agent MUST throw an
-                <code>InvalidStateError</code> exception and abort this
+                provided, the user agent MUST reject the returned promise with
+                <code>InvalidStateError</code> and abort this
                 operation.</p>
               </li>
 
@@ -1035,11 +956,12 @@
                 there is a current value for <code><a href=
                 "#widl-RTCPeerConnection-peerIdentity">peerIdentity</a></code>
                 ), then this also establishes a <a href=
-                "target-peer-identity">target peer identity</a>.</p>
+                "#target-peer-identity">target peer identity</a>.</p>
 
                 <p>If there is a <a href="#target-peer-identity">target peer
-                identity</a>, then <code>setRemoteDescription</code> fails
-                unless it contains an identity assertion that matches the
+                identity</a>, then <code>setRemoteDescription</code> rejects
+                the returned promise, unless the description contains an
+                identity assertion that matches the
                 <a href="#target-peer-identity">target peer identity</a>. The
                 <code><a>RTCPeerConnection</a></code> MAY be closed if the
                 validated peer identity does not match the <a href=
@@ -1053,8 +975,8 @@
           <dd>
             <p>The <dfn id=
             "dom-peerconnection-remotedescription"><code>remoteDescription</code></dfn>
-            attribute MUST return the <code><a>RTCSessionDescription</a></code>
-            that was most recently passed to <code><a href=
+            attribute MUST return the last <code><a>RTCSessionDescription</a></code>
+            that was successfully set using <code><a href=
             "#dom-peerconnection-setremotedescription">setRemoteDescription()</a></code>,
             plus any remote candidates that have been supplied via
             <code><a href=
@@ -1065,8 +987,7 @@
             yet been set.</p>
           </dd>
 
-          <dt>void addIceCandidate (RTCIceCandidate candidate, VoidFunction
-          successCallback, RTCPeerConnectionErrorCallback failureCallback)</dt>
+          <dt>Promise&lt;void&gt; addIceCandidate (RTCIceCandidate candidate)</dt>
 
           <dd>
             <p>The <dfn id=
@@ -1080,16 +1001,42 @@
             media state if it results in different connectivity being
             established.</p>
 
-            <p>If the candidate parameter is malformed, throw a
-            <code>SyntaxError</code> exception and abort these steps.</p>
+            <ol>
+              <li>
+                <p>Let <var>p</var> be a new promise.</p>
+              </li>
 
-            <p>If the candidate is successfully applied, the user agent MUST
-            queue a task to invoke <var>successCallback</var>.</p>
+              <li>
+                <p>If this <code><a>RTCPeerConnection</a></code> object's
+                <a href="#dom-peerconnection-signaling-state">signaling
+                state</a> is <code>closed</code>, the user agent MUST reject
+                <var>p</var> with <code>InvalidStateError</code>, and
+                jump to the step labeled <em>Return</em>.</p>
+              </li>
 
-            <p>If the candidate could not be successfully applied, the user
-            agent MUST queue a task to invoke <var>failureCallback</var> with a
-            <code>DOMError</code> object whose <code>name</code> attribute has
-            the value TBD (TODO InvalidCandidate and InvalidMidIndex).</p>
+              <li>
+                <p>If the candidate parameter is malformed, reject <var>p</var>
+                with <code>SyntaxError</code> and jump to the step labeled
+                <em>Return</em>.</p>
+              </li>
+
+              <li>
+                <p>If the candidate could not be successfully applied, reject
+                <var>p</var> with a <code>DOMError</code> object whose
+                <code>name</code> attribute has the value TBD (TODO
+                InvalidCandidate and InvalidMidIndex) and jump to the step
+                labeled <em>Return</em>.</p>
+              </li>
+
+              <li>
+                <p>If the candidate is successfully applied, resolve
+                <var>p</var> with <var>undefined</var>.</p>
+              </li>
+
+              <li>
+                <p><em>Return:</em> Return <var>p</var>.</p>
+              </li>
+            </ol>
 
             <div class="note">
               What errors do we need here? Should we reuse the
@@ -1130,6 +1077,32 @@
             Agent</a> ICE state.</p>
           </dd>
 
+          <dt>readonly attribute boolean? canTrickleIceCandidates</dt>
+
+          <dd>
+            <p>This attribute indicates whether the remote peer is able to
+            accept trickled ICE candidates [[TRICKLE-ICE]].  The value is
+            determined based on whether a remote description indicates support
+            for trickle ICE, as defined in Section 4.1.9 of [[!RTCWEB-JSEP]].  Prior to
+            the completion
+            of <a href="#dom-peerconnection-setremotedescription"><code>setRemoteDescription</code></a>,
+            this value is <code>null</code>.
+          </dd>
+
+          <dt>RTCConfiguration getConfiguration()</dt>
+
+          <dd>
+            <p>Returns a <code><a>RTCConfiguration</a></code> object
+            representing the current configuration of this
+            <code><a>RTCPeerConnection</a></code> object.</p>
+
+            <p>When this method is call, the user agent MUST construct new
+            <code><a>RTCConfiguration</a></code> object to be returned, and
+            initialize it using the ICE Agent's <a href=
+            "#ice-transports-setting">ICE transports setting</a> and <a href=
+            "#ice-servers-list">ICE servers list</a>.</p>
+          </dd>
+
           <dt>void setConfiguration (RTCConfiguration configuration)</dt>
 
           <dd>
@@ -1148,18 +1121,18 @@
             <ol>
               <li>
                 <p>If the <a href=
-                "#widl-RTCConfiguration-iceTransports">iceTransports</a> member
+                "#widl-RTCConfiguration-iceTransportPolicy">iceTransportPolicy</a> member
                 is present, let its value be the ICE Agent's <dfn id=
                 "ice-transports-setting">ICE transports setting</dfn>.</p>
               </li>
 
               <li>
                 <p>If the <a href=
-                "#widl-RTCConfiguration-iceTransports">iceTransports</a> member
+                "#widl-RTCConfiguration-iceTransportPolicy">iceTransportPolicy</a> member
                 was omitted and the ICE Agent's <a href=
                 "#ice-transports-setting">ICE transports setting</a> is unset,
                 set the ICE Agent's ICE transports setting to the <a href=
-                "#widl-RTCConfiguration-iceTransports">iceTransports</a>
+                "#widl-RTCConfiguration-iceTransportPolicy">iceTransportPolicy</a>
                 dictionary member default value.</p>
               </li>
 
@@ -1233,20 +1206,6 @@
             </div>
           </dd>
 
-          <dt>RTCConfiguration getConfiguration()</dt>
-
-          <dd>
-            <p>Returns a <code><a>RTCConfiguration</a></code> object
-            representing the current configuration of this
-            <code><a>RTCPeerConnection</a></code> object.</p>
-
-            <p>When this method is call, the user agent MUST construct new
-            <code><a>RTCConfiguration</a></code> object to be returned, and
-            initialize it using the ICE Agent's <a href=
-            "#ice-transports-setting">ICE transports setting</a> and <a href=
-            "#ice-servers-list">ICE servers list</a>.</p>
-          </dd>
-
           <dt>void close ()</dt>
 
           <dd>
@@ -1310,6 +1269,214 @@
             time the <a href=
             "#dom-peerconnection-ice-connection-state"><code>RTCPeerConnection</code>
             ice connection state</a> changes.
+          </dd>
+
+          <dt>attribute EventHandler onicegatheringstatechange</dt>
+
+          <dd>
+            This event handler, of event handler event type <code><a href=
+            "#event-icegatheringstatechange">icegatheringstatechange</a></code>,
+            MUST be fired by all objects implementing the
+            <code><a>RTCPeerConnection</a></code> interface. It is called any
+            time
+            the <a href="#dom-peerconnection-ice-gathering-state"><code>RTCPeerConnection</code>
+            ice gathering state</a> changes.
+          </dd>
+        </dl>
+      </section>
+
+      <section>
+        <h3>Legacy Interface Extensions</h3>
+
+        <div class="note">These methods are kept on <code>
+            <a>RTCPeerConnection</a>
+          </code> for legacy purposes.</div>
+
+        <dl class="idl" title="partial interface RTCPeerConnection">
+
+          <dt>void createOffer (RTCSessionDescriptionCallback successCallback,
+          RTCPeerConnectionErrorCallback failureCallback, optional
+          RTCOfferOptions options)</dt>
+
+          <dd>
+            <p>When the <code>createOffer</code> method is called, the user
+            agent MUST run the following steps:</p>
+
+            <ol>
+              <li>
+                <p>Let <var>successCallback</var> be the method's first
+                argument.</p>
+              </li>
+              <li>
+                <p>Let <var>failureCallback</var> be the callback indicated by
+                the method's second argument.</p>
+              </li>
+              <li>
+                <p>Let <var>options</var> be the callback indicated by
+                the method's third argument.</p>
+              </li>
+              <li>
+                <p>Invoke <a
+                  href="#dom-mediadevices-getusermedia">RTCPeerConnection.createOffer()</a>
+                with <var>options</var> as the sole argument, and let <var>p</var>
+                be the resulting promise.</p>
+              </li>
+            </ol>
+
+            <p>Upon fulfillment of <var>p</var> with value <var>offer</var>,
+            invoke <var>successCallback</var> with <var>offer</var> as the
+            argument.</p>
+
+            <p>Upon rejection of <var>p</var> with reason <var>r</var>,
+            invoke <var>failureCallback</var> with <var>r</var> as the
+            argument.</p>
+          </dd>
+
+          <dt>void setLocalDescription (RTCSessionDescription description,
+          VoidFunction successCallback, RTCPeerConnectionErrorCallback
+          failureCallback)</dt>
+
+          <dd>
+            <p>When the <code>setLocalDescription</code> method is called, the
+            user agent MUST run the following steps:</p>
+
+            <ol>
+              <li>
+                <p>Let <var>description</var> be the method's first
+                argument.</p>
+              </li>
+              <li>
+                <p>Let <var>successCallback</var> be the callback indicated by
+                the method's second argument.</p>
+              </li>
+              <li>
+                <p>Let <var>failureCallback</var> be the callback indicated by
+                the method's third argument.</p>
+              </li>
+              <li>
+                <p>Invoke <a
+                  href="#dom-peerconnection-setlocaldescription">
+                  RTCPeerConnection.setLocalDescription()</a>
+                with <var>description</var> as the sole argument, and let
+                <var>p</var> be the resulting promise.</p>
+              </li>
+            </ol>
+
+            <p>Upon fulfillment of <var>p</var>,
+            invoke <var>successCallback</var> with <code>undefined</code> as the
+            argument.</p>
+
+            <p>Upon rejection of <var>p</var> with reason <var>r</var>,
+            invoke <var>failureCallback</var> with <var>r</var> as the
+            argument.</p>
+          </dd>
+
+          <dt>void createAnswer (RTCSessionDescriptionCallback successCallback,
+          RTCPeerConnectionErrorCallback failureCallback)</dt>
+
+          <dd>
+            <p>When the <code>createAnswer</code> method is called, the user
+            agent MUST run the following steps:</p>
+
+            <ol>
+              <li>
+                <p>Let <var>successCallback</var> be the method's first
+                argument.</p>
+              </li>
+              <li>
+                <p>Let <var>failureCallback</var> be the callback indicated by
+                the method's second argument.</p>
+              </li>
+              <li>
+                <p>Invoke <a
+                  href="#dom-mediadevices-getusermedia">RTCPeerConnection.createAnswer()</a>
+                with no arguments, and let <var>p</var> be the resulting promise.</p>
+              </li>
+            </ol>
+
+            <p>Upon fulfillment of <var>p</var> with value <var>answer</var>,
+            invoke <var>successCallback</var> with <var>answer</var> as the
+            argument.</p>
+
+            <p>Upon rejection of <var>p</var> with reason <var>r</var>,
+            invoke <var>failureCallback</var> with <var>r</var> as the
+            argument.</p>
+          </dd>
+
+          <dt>void setRemoteDescription (RTCSessionDescription description,
+          VoidFunction successCallback, RTCPeerConnectionErrorCallback
+          failureCallback)</dt>
+
+          <dd>
+            <p>When the <code>setRemoteDescription</code> method is called, the
+            user agent MUST run the following steps:</p>
+
+            <ol>
+              <li>
+                <p>Let <var>description</var> be the method's first
+                argument.</p>
+              </li>
+              <li>
+                <p>Let <var>successCallback</var> be the callback indicated by
+                the method's second argument.</p>
+              </li>
+              <li>
+                <p>Let <var>failureCallback</var> be the callback indicated by
+                the method's third argument.</p>
+              </li>
+              <li>
+                <p>Invoke <a
+                  href="#dom-peerconnection-setremotedescription">
+                  RTCPeerConnection.setLocalDescription()</a>
+                with <var>description</var> as the sole argument, and let
+                <var>p</var> be the resulting promise.</p>
+              </li>
+            </ol>
+
+            <p>Upon fulfillment of <var>p</var>,
+            invoke <var>successCallback</var> with <code>undefined</code> as the
+            argument.</p>
+
+            <p>Upon rejection of <var>p</var> with reason <var>r</var>,
+            invoke <var>failureCallback</var> with <var>r</var> as the
+            argument.</p>
+          </dd>
+
+          <dt>void addIceCandidate (RTCIceCandidate candidate, VoidFunction
+          successCallback, RTCPeerConnectionErrorCallback failureCallback)</dt>
+
+          <dd>
+            <p>When the <code>addIceCandidate</code> method is called, the
+            user agent MUST run the following steps:</p>
+
+            <ol>
+              <li>
+                <p>Let <var>candidate</var> be the method's first argument.</p>
+              </li>
+              <li>
+                <p>Let <var>successCallback</var> be the callback indicated by
+                the method's second argument.</p>
+              </li>
+              <li>
+                <p>Let <var>failureCallback</var> be the callback indicated by
+                the method's third argument.</p>
+              </li>
+              <li>
+                <p>Invoke <a
+                  href="#dom-peerconnection-addicecandidate">
+                  RTCPeerConnection.addIceCandiddate()</a>
+                with <var>candidate</var> as the sole argument, and let
+                <var>p</var> be the resulting promise.</p>
+              </li>
+            </ol>
+
+            <p>Upon fulfillment of <var>p</var>,
+            invoke <var>successCallback</var> with <code>undefined</code> as the
+            argument.</p>
+
+            <p>Upon rejection of <var>p</var> with reason <var>r</var>,
+            invoke <var>failureCallback</var> with <var>r</var> as the
+            argument.</p>
           </dd>
         </dl>
       </section>
@@ -1554,13 +1721,16 @@
       <section>
         <h4>General Principles</h4>
 
-        <p>Errors are indicated in two ways: exceptions and objects passed to
-        error callbacks. Exceptions are thrown to indicate invalid state and
-        other programming errors. For example when a method is called when the
-        <code><a>RTCPeerConnection</a></code> is in an invalid state, or a
-        state in which that particular method is not allowed to be executed. In
-        all other cases, an error object MUST be provided to the error
-        callback.</p>
+        <p>All methods that return promises are governed by the standard error
+        handling rules of promises. Methods that do not return promises may throw
+        exceptions to indicate errors.</p>
+
+        <p>Legacy-methods may only throw exceptions to indicate invalid state
+        and other programming errors. For example, when a legacy-method is
+        called when the <code><a>RTCPeerConnection</a></code> is in an invalid
+        state or a state in which that particular method is not allowed to be
+        executed, it will throw an exception. In all other cases, legacy methods
+        MUST provide an error object to the error callback.</p>
       </section>
 
       <section>
@@ -1597,10 +1767,6 @@
             could not be correctly applied to the RTCPeerConnection due to its
             current state. User agents SHOULD provide as much additional
             information in the error message as possible.</li>
-
-            <li>IncompatibleMediaStreamTrackError: The provided
-            MediaStreamTrack is not an element of a MediaStream that is
-            currently in the RTCPeerConnection's localStreams attribute.</li>
 
             <li>InternalError: The RTCPeerConnection encountered an error that
             it could not recover from.</li>
@@ -1791,20 +1957,29 @@
   </section>
 
   <section>
-      <h2>RTP media API</h2>
+      <h2>RTP Media API</h2>
 
-      <p>The RTP media API lets a web application send and receive MediaStreamTracks
-      over a peer-to-peer connection. Tracks, when added to a PeerConnection, result in 
+      <p>The RTP media API lets a web application send and receive <code>MediaStreamTrack</code>s
+      over a peer-to-peer connection. Tracks, when added to a RTCPeerConnection, result in
       signaling; when this signaling is forwarded to a remote peer, it causes
       corresponding tracks to be created on the remote side.</p>
 
-      <p>The actual encoding and transmission of MediaStreamTracks is managed through
-      objects called RTCRtpSenders. Similarly, the reception and decoding of 
-      MediaStreamTracks is managed through objects called RTCRtpReceivers.</p>
+      <p>The actual encoding and transmission of <code>MediaStreamTrack</code>s is managed through
+      objects called <code>RTCRtpSender</code>s. Similarly, the reception and decoding of
+      <code>MediaStreamTrack</code>s is managed through objects called <code>RTCRtpReceiver</code>s.
+      Each track to be sent is associated with exactly one <code>RTCRtpSender</code>, and
+      each track to be received is associated with exactly one <code>RTCRtpReceiver</code>.</p>
 
-      <p>A <code><a>RTCPeerConnection</a></code> object contains a 
-      <dfn id="senders-set">set of RTCRtpSenders</dfn>, representing tracks to
-      be sent, and a <dfn id="receivers-set">set of RTCRtpReceivers</dfn>, 
+      <p><code>RTCRtpSender</code>s are created when the application attaches a
+      <code>MediaStreamTrack</code> to a <code>PeerConnection</code>, via the
+      <code>addTrack</code> method. <code>RTCRtpReceiver</code>s, on the other
+      hand, are created when remote signaling indicates new tracks are available,
+      and each new <code>MediaStreamTrack</code> and its associated <code>RTCRtpReceiver</code>
+      are surfaced to the application via the <code>ontrack</code> event.</p>
+
+      <p>A <code><a>RTCPeerConnection</a></code> object contains a
+      <dfn id="senders-set">set of <code>RTCRtpSender</code>s</dfn>, representing tracks to
+      be sent, and a <dfn id="receivers-set">set of <code>RTCRtpReceiver</code>s</dfn>,
       representing tracks that are to be received on this
       <code><a>RTCPeerConnection</a></code> object. Both of these sets are
       initialized to empty sets when the
@@ -1813,11 +1988,11 @@
       <section>
         <h3>RTCPeerConnection Interface Extensions</h3>
 
-      <p>The RTP media API extends the
-      <code><a>RTCPeerConnection</a></code> interface as described below.</p>
+        <p>The RTP media API extends the
+        <code><a>RTCPeerConnection</a></code> interface as described below.</p>
 
-            <dl class="idl" title="partial interface RTCPeerConnection">
-<dt>sequence&lt;RTCRtpSender&gt; getSenders()</dt>
+        <dl class="idl" title="partial interface RTCPeerConnection">
+          <dt>sequence&lt;RTCRtpSender&gt; getSenders()</dt>
 
           <dd>
             <p>Returns a sequence of <code><a>RTCRtpSender</a></code> objects
@@ -1878,13 +2053,14 @@
               </li>
 
               <li>
-                <p>If an RTCRtpSender for <var>track</var> already exists in
+                <p>If an <code>RTCRtpSender</code> for <var>track</var> already exists in
                 <var>connection</var>'s <a href="#senders-set">set of senders</a>,
-                then abort these steps.</p>
+                throw an <code>InvalidParameter</code> exception and abort these
+                steps.</p>
               </li>
 
               <li>
-                <p>Create a new RTCRtpSender for <var>track</var>, add it to 
+                <p>Create a new <code>RTCRtpSender</code> for <var>track</var>, add it to
                  <var>connection</var>'s <a href="#senders-set">set of senders</a>,
                  and return it to the caller.</p>
               </li>
@@ -1896,7 +2072,7 @@
                 track <a href=
                 "http://www.w3.org/html/wg/drafts/html/master/infrastructure.html#cors-cross-origin">
                 CORS cross-origin</a>. These tracks can be supplied to the
-                addTrack method, and have an RTCRtpSender created for them, but content
+                addTrack method, and have an <code>RTCRtpSender</code> created for them, but content
                 MUST NOT be transmitted, though tracks marked with
                 <var>peerIdentity</var> can be transmitted if they meet the
                 requirements for sending (see <a href="#isolated-pc">
@@ -1913,9 +2089,17 @@
               <li>
                 <p>If <var>connection</var>'s <a href=
                 "#dom-peerconnection-signaling-state"><code>RTCPeerConnection</code>
-                signalingState</a> is <code>stable</code>, then fire a <a href=
+                signalingState</a> is <code>stable</code>, then fire an <a href=
                 "#event-negotiation">negotiationneeded</a> event at
                 <var>connection</var>.</p>
+
+                <div class="note">
+                  <p>Throughout this document, we need to indicate what should
+                  happen if a change happens and the state is not stable, most
+                  likely to fire the negotiationneeded event when the state
+                  eventually returns to stable.
+                  </p>
+                </div>
               </li>
             </ol>
           </dd>
@@ -1923,11 +2107,11 @@
           <dt>void removeTrack (RTCRtpSender sender)</dt>
 
           <dd>
-            <p>Removes <var>sender</var>, and its associated MediaStreamTrack, from the
+            <p>Removes <var>sender</var>, and its associated <code>MediaStreamTrack</code>, from the
             <code><a>RTCPeerConnection</a></code>.</p>
 
             <!-- onended -->
-            <p>When the other peer stops sending a track in this manner, a
+            <p>When the other peer stops sending a track in this manner, an
             <code title="event-MediaStreamTrack-ended"><a href=
             "#event-mediastream-ended">ended</a></code> event is
             fired at the <code><a>MediaStreamTrack</a></code> object.</p>
@@ -1972,6 +2156,7 @@
             </ol>
           </dd>
 
+<<<<<<< HEAD
             <dt>attribute EventHandler ontrack</dt>
 
           <dd>This event handler, of event handler event type <code><a href=
@@ -1983,9 +2168,220 @@
           possible after the <code>setRemoteDescription</code>. This callback
           does not wait for a given media track to be accepted or rejected via
           SDP negotiation.</dd>
+=======
+          <dt>attribute EventHandler ontrack</dt>
 
-            </dl>
+          <dd>
+            <p>This event handler, of event handler event type <code><a href=
+            "#event-track">track</a></code>, MUST be fired
+            by all objects implementing the <code><a>RTCPeerConnection</a></code>
+            interface. </p>
+            <p>It is called any time a <code>MediaStreamTrack</code> is added
+            by the remote peer; the process for this is indicated below.</p>
+            <p>Rejection of incoming tracks can be done by the application after
+            receiving the ontrack event, by stopping the track.</p>
+          </dd>
 
+        </dl>
+        <section>
+          <h4>Processing Remote MediaStreamTracks</h4>
+          <p>The word "components" in this context refers to an RTP media flow
+           and does not have anything to do with how [[ICE]] uses the term
+           "component".</p>
+
+          <p>When a user agent has reached the point where a
+          <code><a>MediaStreamTrack</a></code> can be created to represent an incoming
+          component, the user agent MUST run the following steps:</p>
+
+          <ol>
+            <li>
+              <p>Let <var>connection</var> be the
+              <code><a>RTCPeerConnection</a></code> expecting this media.</p>
+            </li>
+
+            <li>
+              <p>Let <var>streams</var> be a list of <code>
+              <a>MediaStream</a></code> objects that the sender indicated the
+              sent <code><a>MediaStreamTrack</a></code> being a part of. This
+              information needed to collect these objects is part of the remote
+              SDP.</p>
+            </li>
+
+            <li>
+              <p>Run the following steps to create a track
+              representing the incoming component:</p>
+
+              <ol>
+                <li>
+                  <p>Create a <code><a>MediaStreamTrack</a></code> object
+                  <var>track</var> to represent the component.</p>
+                </li>
+
+                <li>
+                  <p>Initialize <var>track's</var> <code><a href=
+                  "getusermedia.html#dom-mediastreamtrack-kind">kind</a></code>
+                  attribute to "<code>audio</code>" or "<code>video</code>"
+                  depending on the media type of the incoming component.</p>
+                </li>
+
+                <li>
+                  <p>Initialize <var>track's</var> <code><a href=
+                  "getusermedia.html#dom-mediastreamtrack-id">id</a></code>
+                  attribute to the component track id.</p>
+                </li>
+
+                <li>
+                  <p>Initialize <var>track's</var> <code><a href=
+                  "getusermedia.html#dom-mediastreamtrack-label">label</a></code>
+                  attribute to "<code>remote audio</code>" or "<code>remote
+                  video</code>" depending on the media type of the incoming
+                  component.</p>
+                </li>
+
+                <li>
+                  <p>Initialize <var>track's</var> <code><a href=
+                  "getusermedia.html#dom-mediastreamtrack-readystate">readyState</a></code>
+                  attribute to <code>muted</code>.</p>
+                </li>
+>>>>>>> master
+
+              </ol>
+            </li>
+
+            <li>
+              <p>If <var>streams</var> is an empty list, create a new <code>
+              <a>MediaStream</a></code> object and add it to <var>streams</var>.
+              </p>
+            </li>
+
+            <li>
+              <p>Add <var>track</var> to all <code><a>MediaStream</a></code>
+              objects in <var>streams</var>.</p>
+            </li>
+
+            <li>
+              <p>Queue a task to run the following substeps:</p>
+
+              <ol>
+                <li>
+                  <p>If the <var>connection</var>'s <a href=
+                  "#dom-peerconnection-signaling-state"><code>RTCPeerConnection</code>
+                  signalingState</a> is <code>closed</code>, abort these
+                  steps.</p>
+                </li>
+
+                <li>
+                  <p>Create a new <code><a>RTCRtpReceiver</a></code> object
+                  <var>receiver</var> for <var>track</track>, and add it
+                    to <var>connection</var>'s <a href=
+                  "#receivers-set">set of receivers</a>.</p>
+                </li>
+
+                <li>
+                  <p><a href="#fire-a-track-event">Fire an event</a> named
+                  <code title="event-track"><a href=
+                  "#event-track">track</a></code> with
+                  <var>receiver</var>, <var>track</var>, and <var>streams</var>
+                  at the <var title="">connection</var> object.</p>
+                </li>
+              </ol>
+            </li>
+          </ol>
+
+          <p>When an <code><a>RTCPeerConnection</a></code> finds that a track
+          from the remote peer has been removed, the user agent MUST follow these
+          steps:</p>
+
+          <ol>
+            <li>
+              <p>Let <var>connection</var> be the
+              <code><a>RTCPeerConnection</a></code> associated with the track
+              being removed.</p>
+            </li>
+
+            <li>
+              <p>Let <var>track</var> be the <code><a>MediaStreamTrack</a></code>
+              object that represents the track being removed, if any. If
+              there isn't one, then abort these steps.</p>
+            </li>
+
+            <li>
+              <p>By definition, <var>track</var> is now ended.</p>
+
+              <p class="note">A <span title="concept-task">task</span> is thus
+              <span title="queue a task">queued</span> to update
+              <var>track</var> and fire an event.</p>
+            </li>
+
+            <li>
+              <p>Queue a task to run the following substeps:</p>
+
+              <ol>
+                <li>
+                  <p>If the <var>connection</var>'s <a href=
+                  "#dom-peerconnection-signaling-state"><code>RTCPeerConnection</code>
+                  signalingState</a> is <code>closed</code>, abort these
+                  steps.</p>
+                </li><!-- close() was probably called just before this
+           task ran -->
+
+                <li>
+                  <p>Remove the <code>RTCRtpReceiver</code> associated with <var>track</var> from
+                  <var>connection</var>'s <a href="#receivers-set">set of receivers</a>.</p>
+                </li>
+              </ol>
+            </li>
+          </ol>
+
+          <div class="note">
+            <p>Since the beginning of this specification, remote MediaStreamTracks have been
+            created by the setRemoteDescription call, one track for each non-rejected
+            m-line in the remote description. This meant that at the caller,
+            MediaStreamTracks were not created until the answer was received, and any media
+            received prior to a remote description (AKA "early media") would be discarded.
+            If any form of remote description is provided (either an answer or a pranswer),
+            this issue does not occur.</p>
+
+            <p>If we want to allow early media to be played out, minor changes are necessary.
+            Fundamentally, we would need to change when tracks are created
+            for the offerer; this would have to happen either as a result of setLocalDescription,
+            or when media packets are received. This ensures that these objects can be created and
+            connected to media elements for playout.</p>
+
+            <p>However, there are three consequences to this potential change:
+              <ol>
+                <li>Media may arrive before the remote DTLS fingerprint has been received.
+                This means that media could be played out before the validity of the
+                DTLS fingerprint has been established, which may be hard to explain to users.
+                As such, it is recommended that media not be played out unless some
+                TBD RTCConfiguration property (e.g. AllowUnverifiedMedia) has been set.
+                </li>
+                <li>The information needed to correlate MediaStreamTracks with their
+                enclosing MediaStream will not yet be present when the tracks are
+                initially generated. Therefore, the implementation will need to
+                create dummy MediaStream objects for each MediaStreamTrack, and then
+                possibly change the associated MediaStream for each track when the
+                remote description is received (e.g. if it indicates that an audio
+                and video MediaStreamTrack should be combined into a single MediaStream).
+                Since media elements act on MediaStreams, some complex reshuffling may
+                need to occur when the remote description is received.
+                </li>
+                <li>The track events fired and their timing will change.
+                For the offerer, ontrack will now fire during setLocalDescription,
+                once for each track being offered, and track.onended will fire during
+                setRemoteDescription for any offered tracks that were rejected.
+                For the answerer, ontrack will continue to fire during setRemoteDescription,
+                as it does today (this is necessary to allow the answerer to reject
+                offered tracks by stopping them).
+                </li>
+              </ol>
+            </p>
+
+            <p>For now, we simply make note of this issue, until it can be
+            considered fully by the WG.</p>
+          </div>
+
+        </section>
       </section>
 
       <section>
@@ -2004,7 +2400,11 @@
         <dd>
           <p>The <dfn id=
           "dom-rtpsender-track"><code>RTCRtpSender.track</code></dfn>
-          attribute is the track that is associated with this 
+<<<<<<< HEAD
+          attribute is the track that is associated with this
+=======
+          attribute is the track that is associated with this
+>>>>>>> master
           <code><a>RTCRtpSender</a></code> object.</p>
         </dd>
       </section>
@@ -2023,7 +2423,7 @@
         <dd>
           <p>The <dfn id=
           "dom-rtpreceiver-track"><code>RTCRtpReceiver.track</code></dfn>
-          attribute is the track that is immutably associated with this 
+          attribute is the track that is immutably associated with this
           <code><a>RTCRtpReceiver</a></code> object.</p>
         </dd>
       </section>
@@ -2031,11 +2431,16 @@
         <section>
       <h3>RTCTrackEvent</h3>
 
+<<<<<<< HEAD
       <p>The <code><a href="#event-track">ontrack</a></code>
+=======
+      <p>The <code><a href="#event-track">track</a></code>
+>>>>>>> master
       event uses the
       <code><a>RTCTrackEvent</a></code> interface.</p>
 
       <p><dfn id="fire-track-event" title="fire track event">Firing an
+<<<<<<< HEAD
       RTCTrackEvent event named <var>e</var></dfn> with an
       <code><a>MediaStreamTrack</a></code> <var>track</var> means that an event
       with the name <var>e</var>, which does not bubble (except where otherwise
@@ -2043,6 +2448,21 @@
       uses the <code><a>RTCTrackEvent</a></code> interface with the
       <code><a href="#dom-trackevent-track">track</a></code> attribute
       set to <var title="">track</var>, MUST be created and dispatched at the
+=======
+      RTCTrackEvent event named <var>e</var></dfn> with an <code>
+      <a>RTCRtpReceiver</a></code> <var>receiver</var>, a
+      <code><a>MediaStreamTrack</a></code> <var>track</var> and a
+      <code>MediaStream</code>[] <var>streams</var>, means that an event
+      with the name <var>e</var>, which does not bubble (except where otherwise
+      stated) and is not cancelable (except where otherwise stated), and which
+      uses the <code><a>RTCTrackEvent</a></code> interface with the
+      <code><a href="#dom-trackevent-receiver">receiver</a></code> attribute
+      set to <var>receiver</var>,
+      <code><a href="#dom-trackevent-track">track</a></code> attribute
+      set to <var>track</var>,
+      <code><a href="#dom-trackevent-streams">streams</a></code> attribute
+      set to <var>streams</var>, MUST be created and dispatched at the
+>>>>>>> master
       given target.</p>
 
       <dl class="idl" data-merge="RTCTrackEventInit" title=
@@ -2063,16 +2483,28 @@
 
         <dd>
           <p>The <dfn id=
+<<<<<<< HEAD
           "dom-trackevent-track"><code>track</code></dfn> attribute
+=======
+          "dom-trackevent-track"><code>RTCTrackEvent.track</code></dfn> attribute
+>>>>>>> master
           represents the <code><a>MediaStreamTrack</a></code> object that is
           associated with the <code><a>RTCRtpReceiver</a></code> identified by
           <code>receiver</code>.</p>
         </dd>
 
+<<<<<<< HEAD
          <dt>sequence&lt;MediaStream&gt; getStreams()</dt>
-     
+
          <dd>
            <p>Returns a sequence of <code><a>MediaStream</a></code> objects
+=======
+         <dt>readonly attribute MediaStream[] streams</dt>
+
+         <dd>
+           <p>The <dfn id="dom-trackevent-streams"><code>streams</code></dfn>
+           attribute returns an array of <code><a>MediaStream</a></code> objects
+>>>>>>> master
            representing the <code><a>MediaStream</a></code>s that this event's
           <code>track</code> is a part of.</p>
         </dd>
@@ -2080,7 +2512,11 @@
       </dl>
 
       <dl class="idl" title="dictionary RTCTrackEventInit : EventInit">
-        
+<<<<<<< HEAD
+
+=======
+
+>>>>>>> master
         <dt>RTCRtpReceiver receiver</dt>
         <dd>
           <p>TODO</p>
@@ -2089,7 +2525,7 @@
         <dd>
           <p>TODO</p>
         </dd>
-        <dt>sequence&lt;MediaStream&gt; streams</dt>
+        <dt>MediaStream[] streams</dt>
         <dd>
           <p>TODO</p>
         </dd>
@@ -2436,7 +2872,7 @@
           was created.</p>
         </dd>
 
-        <dt>readonly attribute unsigned? maxPacketLifeTime</dt>
+        <dt>readonly attribute unsigned short? maxPacketLifeTime</dt>
 
         <dd>
           <p>The <dfn id=
@@ -2448,7 +2884,7 @@
           the <code><a>RTCDataChannel</a></code> was created.</p>
         </dd>
 
-        <dt>readonly attribute unsigned? maxRetransmits</dt>
+        <dt>readonly attribute unsigned short? maxRetransmits</dt>
 
         <dd>
           <p>The <dfn id=
@@ -2933,7 +3369,7 @@
 
         <dd>
           <p>The <dfn>createDTMFSender()</dfn> method creates an RTCDTMFSender
-          that references the given MediaStreamTrack. An RTCRtpSender for <var>track</var>
+          that references the given <code>MediaStreamTrack</code>. An <code>RTCRtpSender</code> for <var>track</var>
           MUST already exist in the<code><a>RTCPeerConnection</a></code> object's <a href=
           "#senders-set">set of senders</a>; if not, throw an
           <code>InvalidParameter</code> exception and abort these steps.</p>
@@ -3458,7 +3894,8 @@ setTimeout(function () {
 
 function processStats() {
     // compare the elements from the current report with the baseline
-    for each (var now in currentReport) {
+    for (var i in currentReport) {
+        var now = currentReport[i];
         if (now.type != "outbund-rtp")
             continue;
 
@@ -3605,9 +4042,10 @@ function logError(error) {
         is ready.
         </li>
 
-        <li>The IdP sends a "SIGN" message to the IdP proxy. This message
-        includes the material the <code>RTCPeerConnection</code> desires to be
-        bound to the user's identity.</li>
+        <li>The <code>RTCPeerConnection</code> sends a "SIGN" message to the IdP
+        proxy. This message includes the material
+        the <code>RTCPeerConnection</code> desires to be bound to the user's
+        identity.</li>
 
         <li>If the user has been authenticated by the IdP, and the IdP is
         willing to generate an identity assertion, the IdP generates an
@@ -3653,7 +4091,7 @@ function logError(error) {
 
         <p>The "LOGINNEEDED" response includes a URL for a page where the
         authorization process can be completed. This URL is exposed to the
-        application through the <code><a href="##">loginUrl</a></code>
+        application through the <code><a>loginUrl</a></code>
         attribute of the <a href=
         "#event-idpassertionerror">idpassertionerror</a> event. This URL might
         be to a page where a user is able to enter their (IdP) username and
@@ -3696,9 +4134,9 @@ function logError(error) {
         is ready.
         </li>
 
-        <li>The IdP sends a "VERIFY" message to the IdP proxy. This message
-        includes the assertion from the offer/answer which is to be
-        verified.</li>
+        <li>The <code>RTCPeerConnection</code> sends a "VERIFY" message to the
+        IdP proxy. This message includes the assertion from the offer/answer
+        which is to be verified.</li>
 
         <li>The IdP proxy verifies the identity assertion (depending on the
         authentication protocol this could involve interacting with the IDP
@@ -3732,7 +4170,7 @@ function logError(error) {
         <code><a href=
         "#widl-RTCPeerConnection-peerIdentity">peerIdentity</a></code>
         attribute and raises a simple event named <a href=
-        "TODO">peeridentity</a> at itself. The assertion information to be
+        "#event-peeridentity">peeridentity</a> at itself. The assertion information to be
         displayed MUST contain the domain name of the IdP as provided in the
         assertion.
         </li>
@@ -3943,7 +4381,7 @@ function logError(error) {
         <dt>attribute DOMString? loginUrl</dt>
 
         <dd>An IdP that is unable to generate an identity assertion due to a
-        lack of sufficient user authentication information can provide a URL to
+        lack of sufficient user authentication information can provide a <dfn title='loginUrl'>URL</dfn> to
         a page where the user can complete authentication. If the IdP provides
         this URL, this attribute includes the value provided by the IdP.</dd>
       </dl>
@@ -3987,21 +4425,33 @@ function logError(error) {
     <section>
       <h3>Introduction</h3>
 
-      <p>The <code>MediaStream</code> interface, as defined in the
+      <p>The <code>MediaStreamTrack</code> interface, as defined in the
       [[!GETUSERMEDIA]] specification, typically represents a stream of data of
-      audio and/or video. A <code>MediaStream</code> may be extended to
-      represent a stream that either comes from or is sent to a remote node
+      audio or video. One or more <code>MediaStreamTrack</code>s can be
+      collected in a <code>MediaStream</code> (strictly speaking, a <code>
+      MediaStream</code> as defined in [[!GETUSERMEDIA]] may contain
+      zero or more <code>MediaStreamTrack</code> objects).
+
+      A  <code>MediaStreamTrack</code> may be extended to
+      represent a stream that either comes from or is sent to a remote peer
       (and not just the local camera, for instance). The extensions required to
-      enable this capability on the <code>MediaStream</code> object will be
+      enable this capability on the <code>MediaStreamTrack</code> object will be
       described in this section. How the media is transmitted to the peer is
       described in [[!RTCWEB-RTP]], [[!RTCWEB-AUDIO]], and
       [[!RTCWEB-TRANSPORT]].</p>
 
-      <p>A <code>MediaStream</code> as defined in [[!GETUSERMEDIA]] may contain
-      zero or more <code>MediaStreamTrack</code> objects. A
-      <code>MediaStreamTrack</code> sent to another peer will appear as one and
+      A <code>MediaStreamTrack</code> sent to another peer will appear as one and
       only one <code>MediaStreamTrack</code> to the recipient. A peer is
-      defined as a user agent that supports this specification.</p>
+      defined as a user agent that supports this specification.
+      In addition, the sending side application can indicate what <code>
+      MediaStream</code> object(s) the <code>MediaStreamTrack</code> is member
+      of. The corresponding <code>MediaStream</code> object(s) on the receiver
+      side will be created (if not already present) and populated accordingly.</p>
+
+      <p>As also described earlier in this document, the objects <code>
+      RTCRtpSender</code> and <code>RTCRtpReceiver</code> can be used by the
+      application to get more fine grained control over the transmission and
+      reception of <code>MediaStreamTrack</code>s.</p>
 
       <p>Channels are the smallest unit considered in the
       <code>MediaStream</code> specification. Channels are intended to be
@@ -4011,24 +4461,25 @@ function logError(error) {
       encode, or discard, all the channels in the track.</p>
 
       <p>The concepts of an input and output to a given
-      <code>MediaStream</code> apply in the case of <code>MediaStream</code>
+      <code>MediaStreamTrack</code> apply in the case of <code>MediaStreamTrack</code>
       objects transmitted over the network as well. A
-      <code><a>MediaStream</a></code> created by an
-      <code><a>RTCPeerConnection</a></code> object (described later in this
+      <code><a>MediaStreamTrack</a></code> created by an
+      <code><a>RTCPeerConnection</a></code> object (as described previously in this
       document) will take as input the data received from a remote peer.
-      Similarly, a <code>MediaStream</code> from a local source, for instance a
+      Similarly, a <code>MediaStreamTrack</code> from a local source, for instance a
       camera via [[!GETUSERMEDIA]], will have an output that represents what is
       transmitted to a remote peer if the object is used with an
       <code><a>RTCPeerConnection</a></code> object.</p>
 
-      <p>The concept of duplicating <code>MediaStream</code> objects as
-      described in [[!GETUSERMEDIA]] is also applicable here. This feature can
-      be used, for instance, in a video-conferencing scenario to display the
+      <p>The concept of duplicating <code>MediaStream</code> and
+      <code>MediaStreamTrack</code> objects as described in [[!GETUSERMEDIA]] is
+      also applicable here. This feature can be used, for instance, in a
+      video-conferencing scenario to display the
       local video from the user's camera and microphone in a local
       monitor, while only transmitting the audio to the remote peer (e.g. in
-      response to the user using a "video mute" feature). Combining tracks from
-      different <code><a>MediaStream</a></code> objects into a new
-      <code><a>MediaStream</a></code> is useful in certain situations.</p>
+      response to the user using a "video mute" feature). Combining
+      different <code>MediaStreamTrack</code> objects into new <code>MediaStream</code>
+      objects is useful in certain situations.</p>
 
       <p class="note">In this document, we only specify aspects of the
       following objects that are relevant when used along with an
@@ -4045,15 +4496,15 @@ function logError(error) {
         <h4>id</h4>
 
         <p>The <code><a href=
-        "getusermedia.html#dom-mediastream-id">id</a></code> attribute
+        "http://w3c.github.io/mediacapture-main/#dom-mediastream-id">id</a></code> attribute
         specified in <code>MediaStream</code> returns an id that is unique to
-        this stream, so that streams can be recognized after they are sent
-        through the <code><a href=
+        this stream, so that streams can be recognized at the
+        remote end of the <code><a href=
         "#rtcpeerconnection-interface">RTCPeerConnection</a></code> API.</p>
 
         <p>When a <code><a href="#mediastream">MediaStream</a></code> is
         created to represent a stream obtained from a remote peer, the
-        <code><a href="getusermedia.html#dom-mediastream-id">id</a></code>
+        <code><a href="http://w3c.github.io/mediacapture-main/#dom-mediastream-id">id</a></code>
         attribute is initialized from information provided by the remote
         source.</p>
 
@@ -4073,15 +4524,17 @@ function logError(error) {
         <p>A new media track may be associated with an existing
         <code><a>MediaStream</a></code>. For example, if a remote peer adds a
         new <code><a>MediaStreamTrack</a></code> object to a
-        <code><a>MediaStream</a></code> that is being sent over an
-        <code><a>RTCPeerConnection</a></code>, this is observed on the local
+        <code><a>RTCPeerConnection</a></code>, and indicates that the
+        <code><a>MediaStreamTrack</a></code> is a member of a <code><a>
+        MediaStream</a></code> that has already been created locally
+        by the <code><a>RTCPeerConnection</a></code>, this is observed on the local
         user agent. If this happens for the reason exemplified, or for any
         other reason than the <code><a href=
-        "getusermedia.html#dom-mediastream-addtrack">addTrack()</a></code>
+        "http://w3c.github.io/mediacapture-main/#dom-mediastream-addtrack">addTrack()</a></code>
         method being invoked locally on a <code><a>MediaStream</a></code> or
         tracks being added as the stream is created (i.e. the stream is
-        initialized with tracks), the user agent MUST run the following
-        steps:</p>
+        initialized with tracks),
+        the user agent MUST run the following steps:</p>
 
         <ol>
           <li>
@@ -4090,53 +4543,18 @@ function logError(error) {
           </li>
 
           <li>
-            <p><dfn id="represent-component-with-track">Represent component
-            with track</dfn>: Run the following steps to create a track
-            representing the incoming component:</p>
+            <p>Let <var>track</var> be the <code><a>MediaStreamTrack</a></code>
+            object representing the media component about to be added.</p>
+          </li>
 
-            <ol>
-              <li>
-                <p>Create a <code><a>MediaStreamTrack</a></code> object
-                <var>track</var> to represent the component.</p>
-              </li>
-
-              <li>
-                <p>Initialize <var>track's</var> <code><a href=
-                "getusermedia.html#dom-mediastreamtrack-kind">kind</a></code>
-                attribute to "<code>audio</code>" or "<code>video</code>"
-                depending on the media type of the incoming component.</p>
-              </li>
-
-              <li>
-                <p>Initialize <var>track's</var> <code><a href=
-                "getusermedia.html#dom-mediastreamtrack-id">id</a></code>
-                attribute to the component track id.</p>
-              </li>
-
-              <li>
-                <p>Initialize <var>track's</var> <code><a href=
-                "getusermedia.html#dom-mediastreamtrack-label">label</a></code>
-                attribute to "<code>remote audio</code>" or "<code>remote
-                video</code>" depending on the media type of the incoming
-                component.</p>
-              </li>
-
-              <li>
-                <p>Initialize <var>track's</var> <code><a href=
-                "getusermedia.html#dom-mediastreamtrack-readystate">readyState</a></code>
-                attribute to <code>muted</code>.</p>
-              </li>
-
-              <li>
-                <p>Add <var>track</var> to <var>stream's</var> <a href=
-                "getusermedia.html#track-set">track set</a>.</p>
-              </li>
-            </ol>
+          <li>
+            <p>Add <var>track</var> to <var>stream's</var> <a href=
+            "getusermedia.html#track-set">track set</a>.</p>
           </li>
 
           <li>
             <p>Fire a track event named <code><a href=
-            "getusermedia.html#event-mediastream-addtrack">addtrack</a></code>
+            "http://w3c.github.io/mediacapture-main/#event-mediastream-addtrack">addtrack</a></code>
             with the newly created <code><a>MediaStreamTrack</a></code> object
             at <var>stream</var>.</p>
           </li>
@@ -4145,7 +4563,7 @@ function logError(error) {
         <p>An existing media track may also be disassociated from a
         <code><a>MediaStream</a></code>. If this happens for any other reason
         than the <code><a href=
-        "getusermedia.html#dom-mediastream-removetrack">removeTrack()</a></code>
+        "http://w3c.github.io/mediacapture-main/#dom-mediastream-removetrack">removeTrack()</a></code>
         method being invoked locally on a <code><a>MediaStream</a></code> or
         the stream being destroyed, the user agent MUST run the following
         steps:</p>
@@ -4163,12 +4581,12 @@ function logError(error) {
 
           <li>
             <p>Remove <var>track</var> from <var>stream's</var> <a href=
-            "getusermedia.html#track-set">track set</a>.</p>
+            "http://w3c.github.io/mediacapture-main/#track-set">track set</a>.</p>
           </li>
 
           <li>
             <p>Fire a track event named <code><a href=
-            "getusermedia.html#event-mediastream-removetrack">removetrack</a></code>
+            "http://w3c.github.io/mediacapture-main/#event-mediastream-removetrack">removetrack</a></code>
             with <var>track</var> at <var>stream</var>.</p>
           </li>
         </ol>
@@ -4186,12 +4604,24 @@ function logError(error) {
       source, as is the case for a <code>MediaStream</code> received over an
       <code><a>RTCPeerConnection</a></code> ) is always strong.</p>
 
-      <p>When a track belongs to a <code><a>MediaStream</a></code> that comes
+      <p>A <code><a>MediaStreamTrack</a></code>, received from the
+      <code><a href="#event-track">ontrack</a></code> event on an
+      <code><a>RTCPeerConnection</a></code>, MUST have its
+      <code>muted</code> attribute [[!GETUSERMEDIA]] set to
+      <code>true</code> until media data arrives from the RTP source.</p>
+
+      <p>In addition, a <code>MediaStreamTrack</code> has its
+      <code>muted</code> attribute set to <code>true</code> on the
+      remote peer if the local user agent makes inactive the corresponding
+      <code><a>MediaStreamTrack</a></code> that is being sent.</p>
+
+      <p>When a track comes
       from a remote peer and the remote peer has permanently stopped sending
       data the <code>ended</code> event MUST be fired on the track, as
       specified in [[!GETUSERMEDIA]].</p>
 
       <p class="issue">ISSUE: How do you know when it has stopped? This seems
+<<<<<<< HEAD
       like an SDP question, not a media-level question.</p>
 
       <p>A track in a <code><a>MediaStream</a></code>, received with an
@@ -4211,6 +4641,10 @@ function logError(error) {
 
       <p class="issue">ISSUE: How do you know when it has been disabled? This
       seems like an SDP question, not a media-level question.</p>
+=======
+      like an SDP question, not a media-level question. (Suggestion: when the
+      track is ended, either through port 0, or removing the a=msid attrib)</p>
+>>>>>>> master
     </section>
 
     <section>
@@ -4224,7 +4658,7 @@ function logError(error) {
       <p>WebRTC supports calling scenarios where media is sent to a
       specifically identified peer, without the contents of media streams being
       accessible to applications. This is enabled by use of the
-      <code><dfn>peerIdentity</dfn></code> parameter to
+      <code>peerIdentity</code> parameter to
       <code>getUserMedia()</code>.</p>
 
       <p>An application willingly relinquishes access to media by including a
@@ -4235,7 +4669,7 @@ function logError(error) {
       <p>The <code><dfn>MediaStreamConstraints</dfn></code> dictionary is
       expanded to include the <code>peerIdentity</code> parameter.</p>
 
-      <dl class="idl" title="dictionary MediaStreamConstraints">
+      <dl class="idl" title="partial dictionary MediaStreamConstraints">
         <dt>DOMString peerIdentity</dt>
 
         <dd>
@@ -4263,7 +4697,7 @@ function logError(error) {
           protections as content that is <a href=
           "http://www.w3.org/html/wg/drafts/html/master/infrastructure.html#cors-cross-origin">
           CORS cross-origin</a>, as described in the relevant <a href=
-          "http://www.w3.org/html/wg/drafts/html/master/embedded-content-0.html#security-and-privacy-considerations">
+          "http://www.w3.org/html/wg/drafts/html/master/embedded-content.html#security-and-privacy-considerations">
           Security and privacy considerations section</a> of [[HTML5]].</p>
         </li>
 
@@ -4300,7 +4734,7 @@ function logError(error) {
         application to quickly and easily determine whether a track is
         accessible.</p>
 
-        <dl title="partial interface MediaStreamTrack">
+        <dl class="idl" title="partial interface MediaStreamTrack">
           <dt>readonly attribute boolean isolated</dt>
 
           <dd>
@@ -4334,7 +4768,7 @@ function logError(error) {
             <p>A <code>MediaStreamTrack</code> from a stream acquired using the
             <var>peerIdentity</var> option can be transmitted if the
             <code><a>RTCPeerConnection</a></code> has successfully <a href=
-            "sec.identity-verify-assertion">validated the identity</a> of the
+            "#sec.identity-verify-assertion">validated the identity</a> of the
             peer AND that identity is the same identity that was used in the
             <var>peerIdentity</var> option associated with the track. That is,
             the <code>name</code> attribute of the <code>peerIdentity</code>
@@ -4349,7 +4783,7 @@ function logError(error) {
           <li>
             <p>The peer has indicated that it will respect the isolation
             properties of streams. That is, a DTLS connection with a promise to
-            respect stream confidentiality, as defined in [[!WEBRTC-ALPN]] has
+            respect stream confidentiality, as defined in [[!RTCWEB-ALPN]] has
             been established.</p>
           </li>
         </ul>
@@ -4453,8 +4887,15 @@ function start() {
 
     // let the "negotiationneeded" event trigger offer generation
     pc.onnegotiationneeded = function () {
-        pc.createOffer(localDescCreated, logError);
-    }
+        pc.createOffer().then(function (offer) {
+            return pc.setLocalDescription(offer);
+        })
+        .then(function () {
+            // send the offer to the other peer
+            signalingChannel.send(JSON.stringify({ "sdp": pc.localDescription }));
+        })
+        .catch(logError);
+    };
 
     // once remote video track arrives, show it in the remote video element
     pc.ontrack = function (evt) {
@@ -4468,13 +4909,17 @@ function start() {
         if (stream.getAudioTracks().length > 0)
             pc.addTrack(stream.getAudioTracks()[0], stream);
         if (stream.getVideoTracks().length > 0)
-            pc.addTrack(stream.getVideoTracks()[0], stream);    
+<<<<<<< HEAD
+            pc.addTrack(stream.getVideoTracks()[0], stream);
     }, logError);
 }
 
 function localDescCreated(desc) {
     pc.setLocalDescription(desc, function () {
         signalingChannel.send(JSON.stringify({ "sdp": pc.localDescription }));
+=======
+            pc.addTrack(stream.getVideoTracks()[0], stream);
+>>>>>>> master
     }, logError);
 }
 
@@ -4483,15 +4928,25 @@ signalingChannel.onmessage = function (evt) {
         start();
 
     var message = JSON.parse(evt.data);
-    if (message.sdp)
-        pc.setRemoteDescription(new RTCSessionDescription(message.sdp), function () {
-            // if we received an offer, we need to answer
-            if (pc.remoteDescription.type == "offer")
-                pc.createAnswer(localDescCreated, logError);
-        }, logError);
-    else
-        pc.addIceCandidate(new RTCIceCandidate(message.candidate),
-            function () {}, logError);
+    if (message.sdp) {
+        var desc = new RTCSessionDescription(message.sdp);
+
+        // if we get an offer, we need to reply with an answer
+        if (desc.type == "offer") {
+            pc.setRemoteDescription(desc).then(function () {
+                return pc.createAnswer();
+            })
+            .then(function (answer) {
+                return pc.setLocalDescription(answer);
+            })
+            .then(function () {
+                signalingChannel.send(JSON.stringify({ "sdp": pc.localDescription }));
+            })
+            .catch(logError);
+        } else
+            pc.setRemoteDescription(desc).catch(logError);
+    } else
+        pc.addIceCandidate(new RTCIceCandidate(message.candidate)).catch(logError);
 };
 
 function logError(error) {
@@ -4552,8 +5007,15 @@ function start(isInitiator) {
 
     // let the "negotiationneeded" event trigger offer generation
     pc.onnegotiationneeded = function () {
-        pc.createOffer(localDescCreated, logError);
-    }
+        pc.createOffer().then(function (offer) {
+            return pc.setLocalDescription(offer);
+        })
+        .then(function () {
+            // send the offer to the other peer
+            signalingChannel.send(JSON.stringify({ "sdp": pc.localDescription }));
+        })
+        .catch(logError);
+    };
 
     if (isInitiator) {
         // create data channel and setup chat
@@ -4568,26 +5030,30 @@ function start(isInitiator) {
     }
 }
 
-function localDescCreated(desc) {
-    pc.setLocalDescription(desc, function () {
-        signalingChannel.send(JSON.stringify({ "sdp": pc.localDescription }));
-    }, logError);
-}
-
 signalingChannel.onmessage = function (evt) {
     if (!pc)
         start(false);
 
     var message = JSON.parse(evt.data);
-    if (message.sdp)
-        pc.setRemoteDescription(new RTCSessionDescription(message.sdp), function () {
-            // if we received an offer, we need to answer
-            if (pc.remoteDescription.type == "offer")
-                pc.createAnswer(localDescCreated, logError);
-        }, logError);
-    else
-        pc.addIceCandidate(new RTCIceCandidate(message.candidate),
-            function () {}, logError);
+    if (message.sdp) {
+        var desc = new RTCSessionDescription(message.sdp);
+
+        // if we get an offer, we need to reply with an answer
+        if (desc.type == "offer") {
+            pc.setRemoteDescription(desc).then(function () {
+                return pc.createAnswer();
+            })
+            .then(function (answer) {
+                return pc.setLocalDescription(answer);
+            })
+            .then(function () {
+                signalingChannel.send(JSON.stringify({ "sdp": pc.localDescription }));
+            })
+            .catch(logError);
+        } else
+            pc.setRemoteDescription(desc).catch(logError);
+    } else
+        pc.addIceCandidate(new RTCIceCandidate(message.candidate)).catch(logError);
 };
 
 function setupChat() {
@@ -4849,7 +5315,8 @@ sender.insertDTMF("123");
           <td><code><a>RTCTrackEvent</a></code></td>
 
           <td>
-            A new RTCRtpReceiver, and associated MediaStreamTrack, has been added to the <a href=
+            A new incoming <code>MediaStreamTrack</code> has been created, and an associated
+            <code>RTCRtpReceiver</code> has been added to the <a href=
             "#receivers-set">set of receivers</a>.
           </td>
         </tr>
@@ -4896,6 +5363,17 @@ sender.insertDTMF("123");
         </tr>
 
         <tr>
+          <td><dfn id="event-icegatheringstatechange"><code>icegatheringstatechange</code></dfn></td>
+
+          <td><code><a>Event</a></code></td>
+
+          <td>
+            The <a href="#dom-peerconnection-ice-gathering-state"><code>RTCPeerConnection</code>
+            ice gathering state</a> has changed.
+          </td>
+        </tr>
+
+        <tr>
           <td><dfn id="event-icecandidate"><code>icecandidate</code></dfn></td>
 
           <td><code><a>RTCPeerConnectionIceEvent</a></code></td>
@@ -4936,7 +5414,7 @@ sender.insertDTMF("123");
         </tr>
 
         <tr>
-          <td><dfn id="event-peeridentity"><code>peeridentity</code></dfn></td>
+          <td><code id="event-peeridentity">peeridentity</code></td>
 
           <td><code><a>Event</a></code></td>
 
@@ -5041,10 +5519,53 @@ sender.insertDTMF("123");
     <!-- Because you haven't added a <section> element around them
          and respec rewrites h? elements based on the section depth -->
 
+    <h3>Changes since December 5, 2014</h3>
+
+    <ol>
+      <li>Add support for RTCRtpSender and RTCRtpReceiver.</li>
+      <li>Update misleading local/RemoteDescription attribute text.</li>
+
+      <li>Add RTCBundlePolicy.</li>
+
+      <li>All callback-based methods have been moved to a legacy section, and
+      replaced by same-named overloads using Promises instead.</li>
+
+      <!-- put some random merge tag and put your change log entry after
+      that. This reduces the odds of merge conflicts when we merge the pull
+      request -->
+
+      <!-- merge tag A -->
+      <!-- merge tag B -->
+      <!-- merge tag C -->
+      <!-- merge tag D -->
+      <!-- merge tag E -->
+      <!-- merge tag F -->
+      <!-- merge tag G -->
+      <!-- merge tag H -->
+      <!-- merge tag I -->
+      <!-- merge tag J -->
+      <!-- merge tag H -->
+      <!-- merge tag K -->
+      <!-- merge tag L -->
+      <!-- merge tag M -->
+      <!-- merge tag N -->
+      <!-- merge tag O -->
+      <!-- merge tag P -->
+      <!-- merge tag R -->
+      <!-- merge tag S -->
+      <!-- merge tag T -->
+      <!-- merge tag Q -->
+      <!-- merge tag U -->
+      <!-- merge tag V -->
+      <!-- merge tag W -->
+    </ol>
+
     <h3>Changes since June 4, 2014</h3>
 
     <ol>
       <li>Bug 25724: Allow garbage collection of closed PeerConnections</li>
+
+      <li>Bug 27214: Add onicegatheringstatechange event</li>
     </ol>
 
     <h3>Changes since April 10, 2014</h3>
